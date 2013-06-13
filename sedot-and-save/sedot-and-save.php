@@ -19,6 +19,25 @@ class GrabAndSave {
 		add_filter("media_upload_tabs",array(&$this,"build_tab"));
 		add_action("media_upload_grabAndSave", array(&$this, "menu_handle"));
 	}
+
+	/*
+		clean hotlink protection download with UA googlebot
+	*/
+
+	private function getImage($url)
+	{
+		$userAgent = "Googlebot-Image/1.0";
+
+		$ch = curl_init($url);
+		curl_setopt_array($ch, array(
+		    CURLOPT_RETURNTRANSFER => true,
+		    CURLOPT_USERAGENT => $userAgent,
+		)); 
+		$resource = curl_exec($ch);
+		curl_close($ch);
+
+		return $resource;
+	}
 	
 	/*
 	 * Merge an array into middle of another array
@@ -61,11 +80,7 @@ class GrabAndSave {
 		return wp_iframe(array($this,"media_process"));
 	}
 	function fetch_image($url) {
-		if ( function_exists("curl_init") ) {
-			return $this->curl_fetch_image($url);
-		} elseif ( ini_get("allow_url_fopen") ) {
-			return $this->fopen_fetch_image($url);
-		}
+		return ( function_exists("curl_init") ) ? $this->curl_fetch_image($url) : $this->fopen_fetch_image($url);
 	}
 	function curl_fetch_image($url) {
 		$ch = curl_init();
@@ -76,8 +91,7 @@ class GrabAndSave {
 		return $image;
 	}
 	function fopen_fetch_image($url) {
-		$image = file_get_contents($url, false, $context);
-		return $image;
+		return $this->getImage($url);		
 	}
 	
 	function media_process() {
